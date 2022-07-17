@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -55,8 +56,16 @@ class CreatePlaylist:
 
             # use youtube_dl library to collect the song name & artist name from a youtube url
             video = youtube_dl.YoutubeDL({}).extract_info(youtube_url, download=False)
-            song_name = video["track"]
-            artist = video["artist"]
+            song_artist = re.findall(".*-", video["title"])
+            artist = song_artist[0][:-1]
+            song_title = re.findall("-.*\[|-.*\(|-.*$", video["title"])
+            if song_title[0][-1] == '(' or song_title[0][-1] == '[':
+                song_name = song_title[0][1:-1]
+            else:
+                song_name = song_title[0][1:]
+
+            print("TITLE: ", song_name)
+            print("ARTIST: ", artist)
 
             if song_name is not None and artist is not None:
                 # save all important info and skip any missing song and artist
@@ -80,7 +89,6 @@ class CreatePlaylist:
             "public": True
         })
 
-        # end point
         query = "https://api.spotify.com/v1/users/{}/playlists".format(spotify_user_id)
         response = requests.post(
             query,
@@ -90,6 +98,7 @@ class CreatePlaylist:
                 "Authorization": "Bearer {}".format(spotify_token)
             }
         )
+        #print("RESPONSE:", response.json())
         response_json = response.json()
 
         # playlist id
@@ -148,8 +157,8 @@ class CreatePlaylist:
         )
 
         # check for valid response status
-        if response.status_code != 200:
-            raise ResponseException(response.status_code)
+        #if response.status_code != 200:
+        #    raise ResponseException(response.status_code)
 
         response_json = response.json()
         return response_json
